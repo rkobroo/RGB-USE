@@ -8,16 +8,14 @@
   "theme_color": "#9e0cf2",
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "./logo.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "/logo.png",
+      "src": "./logo.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ],
   "share_target": {
@@ -28,8 +26,5 @@
       "text": "shared_text"
     }
   },
-  "categories": ["utilities", "productivity"],
-  "scope": "/",
-  "orientation": "any",
-  "prefer_related_applications": false
+  "categories": ["utilities", "productivity"]
 }
