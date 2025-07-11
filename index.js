@@ -1,11 +1,10 @@
-
 const express = require('express');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Serve static files
-app.use(express.static('.'));
+// Serve static files from the root directory
+app.use(express.static(path.join(__dirname)));
 
 // Route for the main page
 app.get('/', (req, res) => {
@@ -29,6 +28,15 @@ app.get('/VKrDownloader', (req, res) => {
 
 app.get('/VKrDownloader/dark.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'dark.html'));
+});
+
+// Ensure service worker and manifest are served correctly
+app.get('/sw.js', (req, res) => {
+    res.sendFile(path.join(__dirname, 'sw.js'));
+});
+
+app.get('/manifest.webmanifest', (req, res) => {
+    res.sendFile(path.join(__dirname, 'manifest.webmanifest'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
