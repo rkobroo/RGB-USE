@@ -493,7 +493,72 @@ getBodyBG();
                 } else {
                     console.log('No deferred prompt available, attempting alternative install methods');
                     
-                    // Create a simple install prompt
+                    // Check if we're on mobile and can show better instructions
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    const isChrome = /Chrome/i.test(navigator.userAgent);
+                    const isFirefox = /Firefox/i.test(navigator.userAgent);
+                    const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+                    
+                    let instructions = '';
+                    
+                    if (isMobile) {
+                        if (isChrome) {
+                            instructions = `
+                                <div style="text-align: left; margin: 20px 0;">
+                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">📱 Install on Chrome Mobile:</h4>
+                                    <ol style="line-height: 1.8; padding-left: 20px;">
+                                        <li>Tap the <strong>three dots (⋮)</strong> in the top right</li>
+                                        <li>Select <strong>"Add to Home screen"</strong></li>
+                                        <li>Tap <strong>"Add"</strong> to confirm</li>
+                                    </ol>
+                                </div>
+                            `;
+                        } else if (isSafari) {
+                            instructions = `
+                                <div style="text-align: left; margin: 20px 0;">
+                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">📱 Install on Safari:</h4>
+                                    <ol style="line-height: 1.8; padding-left: 20px;">
+                                        <li>Tap the <strong>Share button (↗)</strong> at the bottom</li>
+                                        <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                                        <li>Tap <strong>"Add"</strong> to confirm</li>
+                                    </ol>
+                                </div>
+                            `;
+                        } else {
+                            instructions = `
+                                <div style="text-align: left; margin: 20px 0;">
+                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">📱 Install Instructions:</h4>
+                                    <ol style="line-height: 1.8; padding-left: 20px;">
+                                        <li>Open your browser menu</li>
+                                        <li>Look for <strong>"Add to Home Screen"</strong> or <strong>"Install App"</strong></li>
+                                        <li>Follow the prompts to install</li>
+                                    </ol>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        if (isChrome) {
+                            instructions = `
+                                <div style="text-align: left; margin: 20px 0;">
+                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">💻 Install on Chrome:</h4>
+                                    <ol style="line-height: 1.8; padding-left: 20px;">
+                                        <li>Look for the <strong>install icon (⊕)</strong> in the address bar</li>
+                                        <li>Or click the <strong>three dots (⋮)</strong> → <strong>"Install RKO Downloader"</strong></li>
+                                        <li>Click <strong>"Install"</strong> to confirm</li>
+                                    </ol>
+                                </div>
+                            `;
+                        } else {
+                            instructions = `
+                                <div style="text-align: left; margin: 20px 0;">
+                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">💻 Install Instructions:</h4>
+                                    <p style="line-height: 1.6;">This app can be installed on Chrome-based browsers. For the best experience, please use Chrome, Edge, or Opera.</p>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    // Create a better install prompt with instructions
                     const installDialog = document.createElement('div');
                     installDialog.style.cssText = `
                         position: fixed;
@@ -501,11 +566,13 @@ getBodyBG();
                         left: 0;
                         width: 100%;
                         height: 100%;
-                        background: rgba(0, 0, 0, 0.8);
+                        background: rgba(0, 0, 0, 0.9);
                         display: flex;
                         justify-content: center;
                         align-items: center;
                         z-index: 10000;
+                        padding: 20px;
+                        box-sizing: border-box;
                     `;
                     
                     installDialog.innerHTML = `
@@ -514,13 +581,16 @@ getBodyBG();
                             color: white;
                             padding: 30px;
                             border-radius: 15px;
-                            max-width: 350px;
+                            max-width: 400px;
+                            width: 100%;
                             text-align: center;
                             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                            max-height: 80vh;
+                            overflow-y: auto;
                         ">
                             <div style="font-size: 48px; margin-bottom: 20px;">📱</div>
                             <h3 style="margin-bottom: 20px; color: #fff;">Install RKO Downloader</h3>
-                            <p style="margin-bottom: 20px; line-height: 1.5;">App installation is not supported on this browser/device at the moment.</p>
+                            ${instructions}
                             <button onclick="this.parentElement.parentElement.remove()" style="
                                 background: #667eea;
                                 color: white;
@@ -529,7 +599,8 @@ getBodyBG();
                                 border-radius: 8px;
                                 cursor: pointer;
                                 font-size: 16px;
-                            ">Close</button>
+                                margin-top: 20px;
+                            ">Got it!</button>
                         </div>
                     `;
                     
