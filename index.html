@@ -127,12 +127,6 @@ getBodyBG();
         </div>
         <div class="text-center mt-3">
             <button id="installButton" class="btn btn-primary" style="display: block; padding: 15px 30px; font-size: 18px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 30px; box-shadow: 0 6px 20px rgba(0,0,0,0.4); transition: all 0.3s ease; margin: 20px auto;">📱 Download App</button>
-            <p id="installMessage" style="display: none; color: #fff; margin-top: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px;">
-                <strong>Install Instructions:</strong><br>
-                • <strong>Chrome/Edge:</strong> Look for install icon in address bar<br>
-                • <strong>Safari:</strong> Tap Share → Add to Home Screen<br>
-                • <strong>Firefox:</strong> Menu → Install
-            </p>
         </div>
         <div id="loading" class="text-center mt-3" style="display: none;">
             <div class="centerV">
@@ -424,7 +418,6 @@ getBodyBG();
 
             // Show install button when prompt is available
             document.getElementById('installButton').style.display = 'block';
-            document.getElementById('installMessage').style.display = 'none';
             
             // Update button text to indicate native install is available
             document.getElementById('installButton').innerHTML = '📱 Install App';
@@ -448,18 +441,15 @@ getBodyBG();
         // Show install button persistently
         function setupInstallButton() {
             const installButton = document.getElementById('installButton');
-            const installMessage = document.getElementById('installMessage');
 
             if (isAppInstalled()) {
-                // Hide both if app is already installed
+                // Hide button if app is already installed
                 installButton.style.display = 'none';
-                installMessage.style.display = 'none';
                 return;
             }
 
             // Always show install button for PWA-capable browsers
             installButton.style.display = 'block';
-            installMessage.style.display = 'none';
         }
 
         // Trigger the install prompt when the button is clicked
@@ -488,7 +478,6 @@ getBodyBG();
                     if (choiceResult.outcome === 'accepted') {
                         console.log('App installation accepted');
                         installButton.style.display = 'none';
-                        document.getElementById('installMessage').style.display = 'none';
                         
                         // Show success message
                         showNotification('App installed successfully! 🎉', 100);
@@ -504,28 +493,7 @@ getBodyBG();
                 } else {
                     console.log('No deferred prompt available, attempting alternative install methods');
                     
-                    // Force show browser-specific install instructions
-                    const userAgent = navigator.userAgent.toLowerCase();
-                    let installInstructions = '';
-                    
-                    if (userAgent.includes('chrome') && !userAgent.includes('edg')) {
-                        // Chrome browser
-                        installInstructions = 'Chrome: Look for install icon (⊕) in address bar, or use menu → Install RKO Downloader';
-                    } else if (userAgent.includes('firefox')) {
-                        // Firefox browser
-                        installInstructions = 'Firefox: Use menu (☰) → Install or Add to Home Screen';
-                    } else if (userAgent.includes('safari')) {
-                        // Safari browser
-                        installInstructions = 'Safari: Tap Share button → Add to Home Screen';
-                    } else if (userAgent.includes('edg')) {
-                        // Edge browser
-                        installInstructions = 'Edge: Look for install icon in address bar, or use menu → Apps → Install RKO Downloader';
-                    } else {
-                        // Generic fallback
-                        installInstructions = 'Use your browser menu → Install or Add to Home Screen';
-                    }
-                    
-                    // Create a more prominent install dialog
+                    // Create a simple install prompt
                     const installDialog = document.createElement('div');
                     installDialog.style.cssText = `
                         position: fixed;
@@ -546,13 +514,13 @@ getBodyBG();
                             color: white;
                             padding: 30px;
                             border-radius: 15px;
-                            max-width: 400px;
+                            max-width: 350px;
                             text-align: center;
                             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                         ">
                             <div style="font-size: 48px; margin-bottom: 20px;">📱</div>
                             <h3 style="margin-bottom: 20px; color: #fff;">Install RKO Downloader</h3>
-                            <p style="margin-bottom: 20px; line-height: 1.5;">${installInstructions}</p>
+                            <p style="margin-bottom: 20px; line-height: 1.5;">App installation is not supported on this browser/device at the moment.</p>
                             <button onclick="this.parentElement.parentElement.remove()" style="
                                 background: #667eea;
                                 color: white;
@@ -561,7 +529,7 @@ getBodyBG();
                                 border-radius: 8px;
                                 cursor: pointer;
                                 font-size: 16px;
-                            ">Got it!</button>
+                            ">Close</button>
                         </div>
                     `;
                     
@@ -574,35 +542,8 @@ getBodyBG();
             } catch (error) {
                 console.error('Install prompt error:', error);
                 
-                // Create fallback install dialog
-                const fallbackDialog = document.createElement('div');
-                fallbackDialog.style.cssText = `
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: #1a1a1a;
-                    color: white;
-                    padding: 20px;
-                    border-radius: 10px;
-                    z-index: 10000;
-                    text-align: center;
-                `;
-                
-                fallbackDialog.innerHTML = `
-                    <h4>Install App</h4>
-                    <p>Use your browser menu to install this app</p>
-                    <button onclick="this.parentElement.remove()" style="
-                        background: #667eea;
-                        color: white;
-                        border: none;
-                        padding: 8px 16px;
-                        border-radius: 5px;
-                        cursor: pointer;
-                    ">Close</button>
-                `;
-                
-                document.body.appendChild(fallbackDialog);
+                // Show simple message
+                showNotification('Install option not available for this browser', 0);
                 
                 // Reset button
                 installButton.innerHTML = originalText;
@@ -616,7 +557,6 @@ getBodyBG();
         window.addEventListener('appinstalled', () => {
             console.log('App was installed');
             document.getElementById('installButton').style.display = 'none';
-            document.getElementById('installMessage').style.display = 'none';
         });
 
         // Start clipboard monitoring when page loads
