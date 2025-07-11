@@ -1,22 +1,6 @@
 self.addEventListener('install', function(event) {
   console.log('Service Worker installing...');
   self.skipWaiting();
-  event.waitUntil(
-    caches.open('v1').then(function(cache) {
-      return cache.addAll([
-        '/',
-        '/index.html',
-        '/style.css',
-        '/logo.png',
-        '/generated-icon.png',
-        '/manifest.webmanifest',
-        '/sw.js',
-        '/share-handler.html'
-      ]).catch(error => {
-        console.error('Cache addAll failed:', error);
-      });
-    })
-  );
 });
 
 self.addEventListener('activate', function(event) {
@@ -24,32 +8,28 @@ self.addEventListener('activate', function(event) {
   event.waitUntil(self.clients.claim());
 });
 
+// Handle share target
 self.addEventListener('fetch', function(event) {
-  event.respondWith(
-    caches.match(event.request).then(function(response) {
-      return response || fetch(event.request);
-    }).catch(error => {
-      console.error('Fetch or cache match error:', error);
-      return new Response('Network error', { status: 500 });
-    })
-  );
-
   const url = new URL(event.request.url);
 
+  // Handle share target requests
   if (url.pathname === '/share-handler' && event.request.method === 'GET') {
     event.respondWith(
       fetch('/share-handler.html').then(response => {
         return response;
       }).catch(() => {
+        // Fallback to main page if share handler fails
         return fetch('/');
       })
     );
     return;
   }
 
+  // Handle CORS for downloads
   if (event.request.url.includes('vkrdownloader.xyz')) {
     event.respondWith(
       fetch(event.request).then(response => {
+        // Add CORS headers for downloads
         const newHeaders = new Headers(response.headers);
         newHeaders.set('Access-Control-Allow-Origin', '*');
         newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -67,8 +47,12 @@ self.addEventListener('fetch', function(event) {
     );
     return;
   }
+
+  // Default fetch handling
+  event.respondWith(fetch(event.request));
 });
 
+// Handle notifications for download progress
 self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'DOWNLOAD_PROGRESS') {
     self.registration.showNotification('RKO Downloader', {
@@ -83,4 +67,37 @@ self.addEventListener('message', function(event) {
       }
     });
   }
+});
+const CACHE_NAME = 'rko-downloader-v1';
+const urlsToCache = [
+  './',
+  './index.html',
+  './dark.html',
+  './style.css',
+  './dark.css',
+  './javascript.js',
+  './logo.png',
+  './manifest.webmanifest'
+];
+
+self.addEventListener('install', function(event) {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(function(cache) {
+        return cache.addAll(urlsToCache);
+      })
+  );
+});
+
+self.addEventListener('fetch', function(event) {
+  event.respondWith(
+    caches.match(event.request)
+      .then(function(response) {
+        if (response) {
+          return response;
+        }
+        return fetch(event.request);
+      }
+    )
+  );
 });
