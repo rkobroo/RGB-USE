@@ -34,7 +34,7 @@ self.addEventListener('fetch', function(event) {
         newHeaders.set('Access-Control-Allow-Origin', '*');
         newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         newHeaders.set('Access-Control-Allow-Headers', 'Content-Type');
-        
+
         return new Response(response.body, {
           status: response.status,
           statusText: response.statusText,
@@ -68,27 +68,53 @@ self.addEventListener('message', function(event) {
     });
   }
 });
-const CACHE_NAME = 'rko-downloader-v1';
+const CACHE_NAME = 'rko-downloader-v2';
 const urlsToCache = [
-  './',
-  './index.html',
-  './dark.html',
-  './style.css',
-  './dark.css',
-  './javascript.js',
-  './logo.png',
-  './manifest.webmanifest'
+  '/',
+  '/index.html',
+  '/style.css',
+  '/javascript.js',
+  '/logo.png',
+  '/manifest.webmanifest'
 ];
 
+// Install event
 self.addEventListener('install', function(event) {
+  console.log('Service Worker installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
+        console.log('Opened cache');
         return cache.addAll(urlsToCache);
+      })
+      .then(function() {
+        console.log('All resources cached');
+        return self.skipWaiting();
       })
   );
 });
 
+// Activate event
+self.addEventListener('activate', function(event) {
+  console.log('Service Worker activating...');
+  event.waitUntil(
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.map(function(cacheName) {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(function() {
+      console.log('Service Worker activated');
+      return self.clients.claim();
+    })
+  );
+});
+
+// Fetch event
 self.addEventListener('fetch', function(event) {
   event.respondWith(
     caches.match(event.request)
@@ -96,8 +122,20 @@ self.addEventListener('fetch', function(event) {
         if (response) {
           return response;
         }
-        return fetch(event.request);
+        return fetch(event.request).catch(function() {
+          // Return offline page or cached version if available
+          if (event.request.destination === 'document') {
+            return caches.match('/index.html');
+          }
+        });
       }
     )
   );
+});
+
+// Handle messages from main thread
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
