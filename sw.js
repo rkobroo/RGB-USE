@@ -36,20 +36,17 @@ self.addEventListener('fetch', function(event) {
 
   const url = new URL(event.request.url);
 
-  // Handle share target requests
   if (url.pathname === '/share-handler' && event.request.method === 'GET') {
     event.respondWith(
       fetch('/share-handler.html').then(response => {
         return response;
       }).catch(() => {
-        // Fallback to main page if share handler fails
         return fetch('/');
       })
     );
     return;
   }
 
-  // Handle CORS for downloads
   if (event.request.url.includes('vkrdownloader.xyz')) {
     event.respondWith(
       fetch(event.request).then(response => {
