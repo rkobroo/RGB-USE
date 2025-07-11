@@ -30,5 +30,6 @@
   },
   "categories": ["utilities", "productivity"],
   "scope": "/",
-  "orientation": "any"
+  "orientation": "any",
+  "prefer_related_applications": false
 }
