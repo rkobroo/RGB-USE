@@ -403,6 +403,9 @@ getBodyBG();
             // Show install button when prompt is available
             document.getElementById('installButton').style.display = 'block';
             document.getElementById('installMessage').style.display = 'none';
+            
+            // Update button text to indicate native install is available
+            document.getElementById('installButton').innerHTML = '📱 Install App';
         });
 
         // Show install button persistently
@@ -462,15 +465,24 @@ getBodyBG();
                     // Clear the deferred prompt
                     deferredPrompt = null;
                 } else {
-                    console.log('No install prompt available, trying alternative methods');
+                    console.log('No deferred prompt available, trying to trigger install');
                     
-                    // Force show install prompt for supported browsers
-                    if ('BeforeInstallPromptEvent' in window) {
-                        // Create a custom install prompt
-                        showInstallModal();
-                    } else {
-                        // Show manual instructions
-                        showManualInstallInstructions();
+                    // Try to trigger the browser's native install prompt
+                    try {
+                        // For browsers that support manual triggering
+                        if (window.navigator && window.navigator.standalone !== undefined) {
+                            // Safari iOS
+                            showNotification('Tap Share button → Add to Home Screen', 0);
+                        } else if (window.chrome && window.chrome.webstore) {
+                            // Chrome - try to trigger install
+                            showNotification('Look for install icon in address bar or use browser menu', 0);
+                        } else {
+                            // Other browsers - check for install capability
+                            showNotification('Use browser menu → Install or Add to Home Screen', 0);
+                        }
+                    } catch (e) {
+                        console.log('Fallback notification shown');
+                        showNotification('Use browser menu to install this app', 0);
                     }
                     
                     // Reset button
@@ -479,7 +491,9 @@ getBodyBG();
                 }
             } catch (error) {
                 console.error('Install prompt error:', error);
-                showInstallModal();
+                
+                // Simple fallback - just show a notification
+                showNotification('Use your browser menu to install this app', 0);
                 
                 // Reset button
                 installButton.innerHTML = originalText;
@@ -487,97 +501,7 @@ getBodyBG();
             }
         });
 
-        function showInstallModal() {
-            // Create a custom modal for install instructions
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.8);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 10000;
-            `;
-            
-            const modalContent = document.createElement('div');
-            modalContent.style.cssText = `
-                background: #1a1a1a;
-                color: white;
-                padding: 30px;
-                border-radius: 15px;
-                max-width: 90%;
-                text-align: center;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            `;
-            
-            const isAndroidChrome = /Android/i.test(navigator.userAgent) && /Chrome/i.test(navigator.userAgent);
-            const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
-            
-            let instructions = '';
-            if (isAndroidChrome) {
-                instructions = `
-                    <h3>📱 Install RKO Downloader</h3>
-                    <p>To install this app on your device:</p>
-                    <ol style="text-align: left; margin: 20px 0;">
-                        <li>Tap the menu (⋮) in your browser</li>
-                        <li>Select "Add to Home screen" or "Install app"</li>
-                        <li>Tap "Install" when prompted</li>
-                    </ol>
-                    <p><strong>Or look for the install icon in your address bar!</strong></p>
-                `;
-            } else if (isSafari) {
-                instructions = `
-                    <h3>📱 Install RKO Downloader</h3>
-                    <p>To install this app on your device:</p>
-                    <ol style="text-align: left; margin: 20px 0;">
-                        <li>Tap the Share button (↗)</li>
-                        <li>Scroll down and tap "Add to Home Screen"</li>
-                        <li>Tap "Add" to install</li>
-                    </ol>
-                `;
-            } else {
-                instructions = `
-                    <h3>📱 Install RKO Downloader</h3>
-                    <p>To install this app:</p>
-                    <ul style="text-align: left; margin: 20px 0;">
-                        <li><strong>Chrome/Edge:</strong> Look for install icon in address bar or Menu → Install</li>
-                        <li><strong>Firefox:</strong> Menu → Install</li>
-                        <li><strong>Safari:</strong> Share → Add to Home Screen</li>
-                    </ul>
-                `;
-            }
-            
-            modalContent.innerHTML = instructions + `
-                <button onclick="this.parentElement.parentElement.remove()" style="
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 25px;
-                    margin-top: 20px;
-                    cursor: pointer;
-                    font-size: 16px;
-                ">Got it!</button>
-            `;
-            
-            modal.appendChild(modalContent);
-            document.body.appendChild(modal);
-            
-            // Close modal when clicking outside
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.remove();
-                }
-            });
-        }
-
-        function showManualInstallInstructions() {
-            showInstallModal();
-        }
+        
 
         // Hide the button after installation
         window.addEventListener('appinstalled', () => {
