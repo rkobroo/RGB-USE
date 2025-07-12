@@ -403,10 +403,18 @@ getBodyBG();
             }, 3000);
         }
 
-        // Enhanced Download App Logic
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
+        // Enhanced Download App Logic with better cross-platform support
+        let installButtonSetup = false;
+        
+        // Check if app is already installed
+        function isAppInstalled() {
+            return window.matchMedia('(display-mode: standalone)').matches || 
+                   window.navigator.standalone === true ||
+                   document.referrer.includes('android-app://');
+        }
+        
+        // Show install button if not already installed
+        if (!isAppInstalled()) {
             document.getElementById('installButton').style.display = 'block';
             
             // Auto-hide button after 10 seconds
@@ -420,7 +428,25 @@ getBodyBG();
                     }, 500);
                 }
             }, 10000);
+        }
 
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show button if hidden
+            const installBtn = document.getElementById('installButton');
+            if (installBtn) {
+                installBtn.style.display = 'block';
+                installBtn.style.opacity = '1';
+            }
+        });
+
+        // Setup install button click handler
+        function setupInstallButton() {
+            if (installButtonSetup) return;
+            installButtonSetup = true;
+            
             document.getElementById('installButton').addEventListener('click', () => {
                 if (deferredPrompt) {
                     deferredPrompt.prompt();
@@ -547,19 +573,17 @@ getBodyBG();
                     document.body.appendChild(installDialog);
                 }
             });
-        });
-
-        // Auto-hide install button after 10 seconds if no install prompt is available
-        setTimeout(() => {
-            const installBtn = document.getElementById('installButton');
-            if (!deferredPrompt && installBtn) {
-                installBtn.style.transition = 'opacity 0.5s ease-out';
-                installBtn.style.opacity = '0';
-                setTimeout(() => {
-                    installBtn.style.display = 'none';
-                }, 500);
-            }
-        }, 10000);
+        }
+        
+        // Setup install button on page load
+        window.addEventListener('load', setupInstallButton);
+        
+        // Also setup immediately if DOM is already loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupInstallButton);
+        } else {
+            setupInstallButton();
+        }
 
         window.addEventListener('appinstalled', () => {
             document.getElementById('installButton').style.display = 'none';
