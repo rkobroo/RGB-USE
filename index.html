@@ -116,6 +116,26 @@ getBodyBG();
         </div>
     </div>
 
+    <!-- Install Prompt Modal -->
+    <div id="installPromptModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 15px; max-width: 400px; width: 90%; text-align: center; padding: 0; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <!-- App Icon and Title -->
+            <div style="padding: 30px 20px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div style="width: 80px; height: 80px; background: #fff; border-radius: 15px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                    <img src="https://i.postimg.cc/kX8ddhnX/Untitled-design-20250423-001352-0000.png" style="width: 60px; height: 60px; border-radius: 10px;">
+                </div>
+                <h3 style="margin: 0; font-size: 22px; font-weight: bold;">RKO Downloader - Download Videos Seamlessly</h3>
+                <p style="margin: 10px 0 0; font-size: 14px; opacity: 0.9;">Download videos from YouTube, Instagram, TikTok, Facebook and 1000+ other platforms</p>
+            </div>
+            
+            <!-- Install Button -->
+            <div style="padding: 25px 20px;">
+                <button id="installAppBtn" style="width: 100%; background: #007AFF; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer; margin-bottom: 15px; transition: all 0.3s ease;">Install</button>
+                <button id="closeInstallPrompt" style="background: none; border: none; color: #666; font-size: 16px; cursor: pointer; padding: 10px;">Not now</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container mt-5">
         <div class="row">
             <div class="col-md-10 mx-auto">
@@ -125,9 +145,7 @@ getBodyBG();
                 <button id="downloadBtn" type="submit" class="btn btn-primary">Download</button>
             </div>
         </div>
-        <div class="text-center mt-3">
-            <button id="installButton" class="btn btn-primary" style="display: block; padding: 15px 30px; font-size: 18px; font-weight: bold; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 30px; box-shadow: 0 6px 20px rgba(0,0,0,0.4); transition: all 0.3s ease; margin: 20px auto;">📱 Download App</button>
-        </div>
+        
         <div id="loading" class="text-center mt-3" style="display: none;">
             <div class="centerV">
                 <div class="wave"></div>
@@ -403,8 +421,8 @@ getBodyBG();
             }, 3000);
         }
 
-        // Enhanced Download App Logic with better cross-platform support
-        let installButtonSetup = false;
+        // Install Prompt Logic - Show after 5 seconds
+        let installPromptShown = false;
         
         // Check if app is already installed
         function isAppInstalled() {
@@ -412,42 +430,44 @@ getBodyBG();
                    window.navigator.standalone === true ||
                    document.referrer.includes('android-app://');
         }
-        
-        // Show install button if not already installed
-        if (!isAppInstalled()) {
-            document.getElementById('installButton').style.display = 'block';
-            
-            // Auto-hide button after 10 seconds
-            setTimeout(() => {
-                const installBtn = document.getElementById('installButton');
-                if (installBtn && installBtn.style.display !== 'none') {
-                    installBtn.style.transition = 'opacity 0.5s ease-out';
-                    installBtn.style.opacity = '0';
-                    setTimeout(() => {
-                        installBtn.style.display = 'none';
-                    }, 500);
-                }
-            }, 10000);
-        }
 
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            
-            // Show button if hidden
-            const installBtn = document.getElementById('installButton');
-            if (installBtn) {
-                installBtn.style.display = 'block';
-                installBtn.style.opacity = '1';
-            }
         });
 
-        // Setup install button click handler
-        function setupInstallButton() {
-            if (installButtonSetup) return;
-            installButtonSetup = true;
+        // Show install prompt after 5 seconds if app is not installed
+        setTimeout(() => {
+            if (!isAppInstalled() && !installPromptShown) {
+                showInstallPrompt();
+            }
+        }, 5000);
+
+        function showInstallPrompt() {
+            installPromptShown = true;
+            const modal = document.getElementById('installPromptModal');
+            modal.style.display = 'flex';
             
-            document.getElementById('installButton').addEventListener('click', () => {
+            // Add slide-in animation
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.style.transition = 'opacity 0.3s ease';
+                modal.style.opacity = '1';
+            }, 10);
+        }
+
+        function hideInstallPrompt() {
+            const modal = document.getElementById('installPromptModal');
+            modal.style.transition = 'opacity 0.3s ease';
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        // Setup install prompt event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('installAppBtn').addEventListener('click', () => {
                 if (deferredPrompt) {
                     deferredPrompt.prompt();
                     deferredPrompt.userChoice.then((choiceResult) => {
@@ -458,135 +478,32 @@ getBodyBG();
                             console.log('App installation declined');
                         }
                         deferredPrompt = null;
+                        hideInstallPrompt();
                     });
                 } else {
-                    // Check if we're on mobile and can show better instructions
+                    // Fallback: Try to trigger install or show instructions
                     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                    const isChrome = /Chrome/i.test(navigator.userAgent);
-                    const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
-
-                    let instructions = '';
-
                     if (isMobile) {
-                        if (isChrome) {
-                            instructions = `
-                                <div style="text-align: left; margin: 20px 0;">
-                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">📱 Install on Chrome Mobile:</h4>
-                                    <ol style="line-height: 1.8; padding-left: 20px;">
-                                        <li>Tap the <strong>three dots (⋮)</strong> in the top right</li>
-                                        <li>Select <strong>"Add to Home screen"</strong></li>
-                                        <li>Tap <strong>"Add"</strong> to confirm</li>
-                                    </ol>
-                                </div>
-                            `;
-                        } else if (isSafari) {
-                            instructions = `
-                                <div style="text-align: left; margin: 20px 0;">
-                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">📱 Install on Safari:</h4>
-                                    <ol style="line-height: 1.8; padding-left: 20px;">
-                                        <li>Tap the <strong>Share button (↗)</strong> at the bottom</li>
-                                        <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-                                        <li>Tap <strong>"Add"</strong> to confirm</li>
-                                    </ol>
-                                </div>
-                            `;
-                        } else {
-                            instructions = `
-                                <div style="text-align: left; margin: 20px 0;">
-                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">📱 Install Instructions:</h4>
-                                    <ol style="line-height: 1.8; padding-left: 20px;">
-                                        <li>Open your browser menu</li>
-                                        <li>Look for <strong>"Add to Home Screen"</strong> or <strong>"Install App"</strong></li>
-                                        <li>Follow the prompts to install</li>
-                                    </ol>
-                                </div>
-                            `;
-                        }
+                        alert('To install: Tap the menu button (⋮) and select "Add to Home screen" or "Install app"');
                     } else {
-                        if (isChrome) {
-                            instructions = `
-                                <div style="text-align: left; margin: 20px 0;">
-                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">💻 Install on Chrome:</h4>
-                                    <ol style="line-height: 1.8; padding-left: 20px;">
-                                        <li>Look for the <strong>install icon (⊕)</strong> in the address bar</li>
-                                        <li>Or click the <strong>three dots (⋮)</strong> → <strong>"Install RKO Downloader"</strong></li>
-                                        <li>Click <strong>"Install"</strong> to confirm</li>
-                                    </ol>
-                                </div>
-                            `;
-                        } else {
-                            instructions = `
-                                <div style="text-align: left; margin: 20px 0;">
-                                    <h4 style="color: #4CAF50; margin-bottom: 15px;">💻 Install Instructions:</h4>
-                                    <p style="line-height: 1.6;">This app can be installed on Chrome-based browsers. For the best experience, please use Chrome, Edge, or Opera.</p>
-                                </div>
-                            `;
-                        }
+                        alert('To install: Look for the install icon in your browser\'s address bar or menu');
                     }
-
-                    // Create a better install prompt with instructions
-                    const installDialog = document.createElement('div');
-                    installDialog.style.cssText = `
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background: rgba(0, 0, 0, 0.9);
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 10000;
-                        padding: 20px;
-                        box-sizing: border-box;
-                    `;
-
-                    installDialog.innerHTML = `
-                        <div style="
-                            background: #1a1a1a;
-                            color: white;
-                            padding: 30px;
-                            border-radius: 15px;
-                            max-width: 400px;
-                            width: 100%;
-                            text-align: center;
-                            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-                            max-height: 80vh;
-                            overflow-y: auto;
-                        ">
-                            <div style="font-size: 48px; margin-bottom: 20px;">📱</div>
-                            <h3 style="margin-bottom: 20px; color: #fff;">Install RKO Downloader</h3>
-                            ${instructions}
-                            <button onclick="this.parentElement.parentElement.remove()" style="
-                                background: #667eea;
-                                color: white;
-                                border: none;
-                                padding: 12px 24px;
-                                border-radius: 8px;
-                                cursor: pointer;
-                                font-size: 16px;
-                                margin-top: 20px;
-                            ">Got it!</button>
-                        </div>
-                    `;
-
-                    document.body.appendChild(installDialog);
+                    hideInstallPrompt();
                 }
             });
-        }
-        
-        // Setup install button on page load
-        window.addEventListener('load', setupInstallButton);
-        
-        // Also setup immediately if DOM is already loaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setupInstallButton);
-        } else {
-            setupInstallButton();
-        }
+
+            document.getElementById('closeInstallPrompt').addEventListener('click', hideInstallPrompt);
+            
+            // Close on background click
+            document.getElementById('installPromptModal').addEventListener('click', (e) => {
+                if (e.target.id === 'installPromptModal') {
+                    hideInstallPrompt();
+                }
+            });
+        });
 
         window.addEventListener('appinstalled', () => {
-            document.getElementById('installButton').style.display = 'none';
+            hideInstallPrompt();
             console.log('App installed by user');
         });
 
