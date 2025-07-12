@@ -182,7 +182,7 @@ getBodyBG();
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').then((registration) => {
                 console.log('Service Worker Registered');
-                
+
                 // Listen for updates
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
@@ -190,7 +190,7 @@ getBodyBG();
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                             // New service worker is available
                             console.log('New service worker available');
-                            
+
                             // Optionally notify user about update
                             if (confirm('A new version is available. Reload to update?')) {
                                 newWorker.postMessage({type: 'SKIP_WAITING'});
@@ -202,7 +202,7 @@ getBodyBG();
             }).catch((error) => {
                 console.log('Service Worker registration failed:', error);
             });
-            
+
             // Listen for service worker updates
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 window.location.reload();
@@ -403,104 +403,32 @@ getBodyBG();
             }, 3000);
         }
 
-        // Check if app is already installed
-        function isAppInstalled() {
-            return window.matchMedia('(display-mode: standalone)').matches || 
-                   window.navigator.standalone || 
-                   document.referrer.includes('android-app://');
-        }
-
-        // Listen for the browser's install prompt
+        // Enhanced Download App Logic
         window.addEventListener('beforeinstallprompt', (e) => {
-            console.log('Install prompt available');
             e.preventDefault();
             deferredPrompt = e;
-
-            // Show install button when prompt is available
             document.getElementById('installButton').style.display = 'block';
-            
-            // Update button text to indicate native install is available
-            document.getElementById('installButton').innerHTML = '📱 Install App';
-        });
 
-        // Check if PWA installation is supported
-        function isPWAInstallSupported() {
-            // Check for service worker support
-            if (!('serviceWorker' in navigator)) return false;
-            
-            // Check for manifest
-            const manifestLink = document.querySelector('link[rel="manifest"]');
-            if (!manifestLink) return false;
-            
-            // Check if already in standalone mode
-            if (isAppInstalled()) return false;
-            
-            return true;
-        }
-
-        // Show install button persistently
-        function setupInstallButton() {
-            const installButton = document.getElementById('installButton');
-
-            if (isAppInstalled()) {
-                // Hide button if app is already installed
-                installButton.style.display = 'none';
-                return;
-            }
-
-            // Always show install button for PWA-capable browsers
-            installButton.style.display = 'block';
-        }
-
-        // Trigger the install prompt when the button is clicked
-        document.getElementById('installButton').addEventListener('click', async (event) => {
-            event.preventDefault();
-            console.log('Install button clicked');
-            
-            // Hide the button temporarily to prevent multiple clicks
-            const installButton = document.getElementById('installButton');
-            const originalText = installButton.innerHTML;
-            installButton.innerHTML = '⏳ Installing...';
-            installButton.disabled = true;
-            
-            try {
+            document.getElementById('installButton').addEventListener('click', () => {
                 if (deferredPrompt) {
-                    console.log('Showing native install prompt');
-                    
-                    // Show the native install prompt
-                    const result = await deferredPrompt.prompt();
-                    console.log('Prompt result:', result);
-                    
-                    // Wait for the user's response
-                    const choiceResult = await deferredPrompt.userChoice;
-                    console.log('User choice:', choiceResult);
-                    
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('App installation accepted');
-                        installButton.style.display = 'none';
-                        
-                        // Show success message
-                        showNotification('App installed successfully! 🎉', 100);
-                    } else {
-                        console.log('App installation dismissed');
-                        // Reset button
-                        installButton.innerHTML = originalText;
-                        installButton.disabled = false;
-                    }
-                    
-                    // Clear the deferred prompt
-                    deferredPrompt = null;
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        if (choiceResult.outcome === 'accepted') {
+                            console.log('App installed');
+                            showNotification('App installed successfully! 🎉', 100);
+                        } else {
+                            console.log('App installation declined');
+                        }
+                        deferredPrompt = null;
+                    });
                 } else {
-                    console.log('No deferred prompt available, attempting alternative install methods');
-                    
                     // Check if we're on mobile and can show better instructions
                     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                     const isChrome = /Chrome/i.test(navigator.userAgent);
-                    const isFirefox = /Firefox/i.test(navigator.userAgent);
                     const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
-                    
+
                     let instructions = '';
-                    
+
                     if (isMobile) {
                         if (isChrome) {
                             instructions = `
@@ -557,7 +485,7 @@ getBodyBG();
                             `;
                         }
                     }
-                    
+
                     // Create a better install prompt with instructions
                     const installDialog = document.createElement('div');
                     installDialog.style.cssText = `
@@ -574,7 +502,7 @@ getBodyBG();
                         padding: 20px;
                         box-sizing: border-box;
                     `;
-                    
+
                     installDialog.innerHTML = `
                         <div style="
                             background: #1a1a1a;
@@ -603,37 +531,26 @@ getBodyBG();
                             ">Got it!</button>
                         </div>
                     `;
-                    
+
                     document.body.appendChild(installDialog);
-                    
-                    // Reset button
-                    installButton.innerHTML = originalText;
-                    installButton.disabled = false;
                 }
-            } catch (error) {
-                console.error('Install prompt error:', error);
-                
-                // Show simple message
-                showNotification('Install option not available for this browser', 0);
-                
-                // Reset button
-                installButton.innerHTML = originalText;
-                installButton.disabled = false;
-            }
+            });
         });
 
-        
+        setTimeout(() => {
+            if (!deferredPrompt) {
+                document.getElementById('installButton').style.display = 'none';
+            }
+        }, 3000);
 
-        // Hide the button after installation
         window.addEventListener('appinstalled', () => {
-            console.log('App was installed');
             document.getElementById('installButton').style.display = 'none';
+            console.log('App installed by user');
         });
 
         // Start clipboard monitoring when page loads
         window.addEventListener('load', function() {
             startClipboardMonitoring();
-            setupInstallButton();
 
             // Add auto-download toggle button
             const container = document.querySelector('.col-md-10.mx-auto');
