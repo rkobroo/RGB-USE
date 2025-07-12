@@ -41,9 +41,7 @@
             "https://i.pinimg.com/736x/a6/a2/c4/a6a2c43dd162b80261ad87be1c875965.jpg",
         ];
 
-        if (imageArray.length === 0) {
-            return null;
-        }
+        if (imageArray.length === 0) return null;
 
         const randomKey = Math.floor(Math.random() * imageArray.length);
         const bbgimg = imageArray[randomKey];
@@ -363,23 +361,30 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            console.log('beforeinstallprompt event captured');
+            console.log('beforeinstallprompt event captured, deferredPrompt is ready');
         });
 
         function showInstallPrompt() {
-            if (!deferredPrompt) {
-                showNotification('Installation not available - please use browser menu to install.', 0);
+            if (isAppInstalled()) {
+                showNotification('App is already installed!', 0);
                 return;
             }
-            installPromptShown = true;
-            const modal = document.getElementById('installPromptModal');
-            modal.style.display = 'flex';
-            modal.style.opacity = '0';
-            setTimeout(() => {
-                modal.style.transition = 'opacity 0.3s ease';
-                modal.style.opacity = '1';
-            }, 10);
-            setTimeout(() => { if (modal.style.display === 'flex') hideInstallPrompt(); }, 10000);
+
+            if (deferredPrompt) {
+                console.log('Showing native install prompt');
+                installPromptShown = true;
+                const modal = document.getElementById('installPromptModal');
+                modal.style.display = 'flex';
+                modal.style.opacity = '0';
+                setTimeout(() => {
+                    modal.style.transition = 'opacity 0.3s ease';
+                    modal.style.opacity = '1';
+                }, 10);
+                setTimeout(() => { if (modal.style.display === 'flex') hideInstallPrompt(); }, 10000);
+            } else {
+                console.log('No deferredPrompt available, showing fallback prompt');
+                showNotification('PWA installation not supported yet. Please use the browser menu to install (3 dots > Install App).', 0);
+            }
         }
 
         function hideInstallPrompt() {
@@ -399,10 +404,11 @@
                 hideInstallPrompt();
                 if (deferredPrompt) {
                     try {
+                        console.log('Triggering native install prompt');
                         const promptResult = await deferredPrompt.prompt();
-                        console.log('Prompt result:', promptResult);
+                        console.log('Prompt result:', promptResult.outcome);
                         const choiceResult = await deferredPrompt.userChoice;
-                        console.log('User choice:', choiceResult);
+                        console.log('User choice:', choiceResult.outcome);
                         if (choiceResult.outcome === 'accepted') {
                             showNotification('App installation started! 🎉', 100);
                         } else {
@@ -414,7 +420,7 @@
                         showNotification('Installation failed - please try again or use browser menu.', 0);
                     }
                 } else {
-                    showNotification('No installation prompt available - please use browser menu to install.', 0);
+                    showNotification('No installation prompt available - please use browser menu (3 dots > Install App).', 0);
                 }
             });
 
