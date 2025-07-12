@@ -80,35 +80,35 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item active"><a class="nav-link" href="/VKrDownloader">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="mailto:rkobro112@gmail.com">Service</a></li>
+                    <li class="nav-item"><a class="nav-link" href="mailto:rkobro112@gmail.com">Service</a></li> <!-- Corrected from plain email to mailto -->
                     <li class="nav-item"><a class="nav-link" href="https://www.instagram.com/himalpaudel112/profilecard/?igsh=ZHl5MGlra2c5eDdw">Follow</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/dark">Dark Theme</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/dark">Dark Theme</a></li> <!-- Added Dark Theme link -->
                 </ul>
             </div>
         </nav>
     </header>
 
-    <!-- Quick Download Popup Modal -->
-    <div id="popupModal" class="popup-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div class="popup-content" style="background: white; border-radius: 10px; padding: 20px; max-width: 400px; width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3);">
+    <!-- Added Popup Modal from first code -->
+    <div id="popupModal" class="popup-modal">
+        <div class="popup-content">
             <div class="popup-header">
                 <h3>Quick Download</h3>
-                <span class="close-btn" id="closePopup" style="cursor: pointer; font-size: 24px;">×</span>
+                <span class="close-btn" id="closePopup">×</span>
             </div>
             <div class="popup-body">
                 <div class="input-container">
-                    <input id="popupInput" type="url" class="popup-input" placeholder="Paste URL here..." style="width: 100%; padding: 10px; margin-bottom: 10px;">
+                    <input id="popupInput" type="url" class="popup-input" placeholder="Paste URL here...">
                 </div>
-                <div class="button-container" style="display: flex; gap: 10px;">
-                    <button id="pasteBtn" class="popup-btn paste-btn" style="flex: 1; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px;">Paste</button>
-                    <button id="searchBtn" class="popup-btn search-btn" style="flex: 1; padding: 10px; background: #007bff; color: white; border: none; border-radius: 5px;">Search</button>
+                <div class="button-container">
+                    <button id="pasteBtn" class="popup-btn paste-btn">Paste</button>
+                    <button id="searchBtn" class="popup-btn search-btn">Search</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Install Prompt Modal -->
-    <div id="installPromptModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;">
+    <!-- Added Install Prompt Modal from first code -->
+    <div id="installPromptModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
         <div style="background: white; border-radius: 15px; max-width: 400px; width: 90%; text-align: center; padding: 0; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
             <div style="padding: 30px 20px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                 <div style="width: 80px; height: 80px; background: #fff; border-radius: 15px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
@@ -192,6 +192,7 @@
             navigator.serviceWorker.register('/sw.js').then((registration) => {
                 console.log('Service Worker Registered');
 
+                // Added update handling from first code
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
                     newWorker.addEventListener('statechange', () => {
@@ -208,6 +209,7 @@
                 console.log('Service Worker registration failed:', error);
             });
 
+            // Added controllerchange listener
             navigator.serviceWorker.addEventListener('controllerchange', () => {
                 window.location.reload();
             });
@@ -226,6 +228,7 @@
         let installPromptShown = false;
         let installPromptTimeout;
 
+        // Added platform detection from first code
         const platforms = {
             'youtube.com': { name: 'YouTube', icon: '🎬', quality: 'best' },
             'youtu.be': { name: 'YouTube', icon: '🎬', quality: 'best' },
@@ -237,6 +240,7 @@
             'x.com': { name: 'X (Twitter)', icon: '🐦', quality: 'best' }
         };
 
+        // Added clipboard monitoring from first code
         function startClipboardMonitoring() {
             clipboardCheckInterval = setInterval(checkClipboard, 2000);
         }
@@ -247,8 +251,6 @@
                 if (text && isValidUrl(text) && text !== currentUrl) {
                     currentUrl = text;
                     document.getElementById('inputUrl').value = text;
-                    document.getElementById('popupInput').value = text; // Sync with popup input
-                    showPopup(); // Show popup when URL is detected
 
                     if (autoDownloadEnabled) {
                         showNotification('URL detected! Starting auto-download...', 0);
@@ -271,6 +273,7 @@
             }
         }
 
+        // Added download processing from first code
         async function startAutoDownload(url) {
             if (!url) return;
 
@@ -328,7 +331,6 @@
                 }
 
                 showNotification('Download completed! 🎉', 100);
-                hidePopup(); // Hide popup after download
 
             } catch (error) {
                 console.error('Download error:', error);
@@ -349,6 +351,7 @@
             return downloads[0]?.url;
         }
 
+        // Added notification system from first code
         function showNotification(text, progress = 0) {
             let notification = document.getElementById('autoDownloadNotification');
             if (!notification) {
@@ -364,7 +367,7 @@
                     padding: 15px 20px;
                     border-radius: 10px;
                     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-                    z-index: 3000; /* Higher z-index to stay above popup */
+                    z-index: 1000;
                     display: none;
                     animation: slideDown 0.3s ease-out;
                 `;
@@ -404,29 +407,11 @@
             }, 3000);
         }
 
+        // Enhanced install prompt logic from first code
         function isAppInstalled() {
             return window.matchMedia('(display-mode: standalone)').matches || 
                    window.navigator.standalone === true ||
                    document.referrer.includes('android-app://');
-        }
-
-        function showPopup() {
-            const popup = document.getElementById('popupModal');
-            popup.style.display = 'flex';
-            popup.style.opacity = '0';
-            setTimeout(() => {
-                popup.style.transition = 'opacity 0.3s ease';
-                popup.style.opacity = '1';
-            }, 10);
-        }
-
-        function hidePopup() {
-            const popup = document.getElementById('popupModal');
-            popup.style.transition = 'opacity 0.3s ease';
-            popup.style.opacity = '0';
-            setTimeout(() => {
-                popup.style.display = 'none';
-            }, 300);
         }
 
         function showInstallPrompt() {
@@ -436,7 +421,6 @@
             }
             
             installPromptShown = true;
-            hidePopup(); // Hide popup when install prompt is shown
             const modal = document.getElementById('installPromptModal');
             modal.style.display = 'flex';
             
@@ -463,45 +447,19 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Trigger popup when download button is clicked
-            document.getElementById('downloadBtn').addEventListener('click', showPopup);
-
-            // Close popup
-            document.getElementById('closePopup').addEventListener('click', hidePopup);
-
-            // Paste button functionality (example)
-            document.getElementById('pasteBtn').addEventListener('click', async () => {
-                try {
-                    const text = await navigator.clipboard.readText();
-                    document.getElementById('popupInput').value = text;
-                } catch (err) {
-                    console.log('Clipboard access not available');
-                }
-            });
-
-            // Search button functionality (example)
-            document.getElementById('searchBtn').addEventListener('click', () => {
-                const url = document.getElementById('popupInput').value;
-                if (isValidUrl(url)) {
-                    document.getElementById('inputUrl').value = url;
-                    startAutoDownload(url);
-                    hidePopup();
-                } else {
-                    showNotification('Invalid URL!', 0);
-                }
-            });
-
-            // Install prompt event listeners
+            // Enhanced install prompt event listeners
             document.getElementById('installAppBtn').addEventListener('click', async () => {
                 hideInstallPrompt();
-                hidePopup(); // Ensure popup is hidden
+                
                 if (deferredPrompt) {
                     console.log('Triggering native install prompt');
                     try {
                         const promptResult = await deferredPrompt.prompt();
                         console.log('Prompt result:', promptResult);
+                        
                         const choiceResult = await deferredPrompt.userChoice;
                         console.log('User choice:', choiceResult);
+                        
                         if (choiceResult.outcome === 'accepted') {
                             console.log('App installed successfully');
                             showNotification('App installed successfully! 🎉', 100);
@@ -509,6 +467,7 @@
                             console.log('App installation declined');
                             showNotification('Installation cancelled', 0);
                         }
+                        
                         deferredPrompt = null;
                     } catch (error) {
                         console.error('Install prompt error:', error);
@@ -521,12 +480,14 @@
             });
 
             document.getElementById('closeInstallPrompt').addEventListener('click', hideInstallPrompt);
+            
             document.getElementById('installPromptModal').addEventListener('click', (e) => {
                 if (e.target.id === 'installPromptModal') {
                     hideInstallPrompt();
                 }
             });
 
+            // Existing install button logic
             document.getElementById('installButton').addEventListener('click', () => {
                 if (deferredPrompt) {
                     deferredPrompt.prompt();
@@ -545,6 +506,7 @@
             deferredPrompt = e;
             document.getElementById('installButton').style.display = 'block';
             
+            // Added delayed install prompt from first code
             if (installPromptTimeout) {
                 clearTimeout(installPromptTimeout);
             }
@@ -571,6 +533,7 @@
             deferredPrompt = null;
         });
 
+        // Added auto-download toggle and clipboard monitoring from first code
         window.addEventListener('load', function() {
             startClipboardMonitoring();
 
