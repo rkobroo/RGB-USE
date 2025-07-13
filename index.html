@@ -314,6 +314,8 @@
                     z-index: 1000;
                     display: none;
                     animation: slideDown 0.3s ease-out;
+                    max-height: 80vh;
+                    overflow-y: auto;
                 `;
                 const progressBar = document.createElement('div');
                 progressBar.style.cssText = `width: 100%; height: 4px; background: #444; border-radius: 2px; overflow: hidden; margin: 10px 0 0 0;`;
@@ -328,7 +330,7 @@
             notification.children[0].textContent = text;
             document.getElementById('autoDownloadProgress').style.width = progress + '%';
             notification.style.display = 'block';
-            setTimeout(() => { notification.style.display = 'none'; }, 10000); // Increased to 10s for readability
+            setTimeout(() => { notification.style.display = 'none'; }, 15000); // 15s for detailed reading
         }
 
         let installPromptShown = false;
@@ -340,7 +342,7 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            console.log('beforeinstallprompt event captured, deferredPrompt is ready:', deferredPrompt);
+            console.log('beforeinstallprompt event captured at', new Date().toLocaleTimeString(), 'deferredPrompt:', deferredPrompt);
         });
 
         function showInstallPrompt() {
@@ -349,13 +351,13 @@
                 return;
             }
 
-            console.log('Attempting to show install prompt, deferredPrompt:', deferredPrompt);
+            console.log('Attempting to show install prompt at', new Date().toLocaleTimeString(), 'deferredPrompt:', deferredPrompt);
             if (deferredPrompt) {
-                console.log('Triggering native install prompt directly');
+                console.log('Triggering native install prompt at', new Date().toLocaleTimeString());
                 deferredPrompt.prompt().then((promptResult) => {
-                    console.log('Prompt result:', promptResult.outcome);
+                    console.log('Prompt result at', new Date().toLocaleTimeString(), ':', promptResult.outcome);
                     deferredPrompt.userChoice.then((choiceResult) => {
-                        console.log('User choice:', choiceResult.outcome);
+                        console.log('User choice at', new Date().toLocaleTimeString(), ':', choiceResult.outcome);
                         if (choiceResult.outcome === 'accepted') {
                             showNotification('App installation started! 🎉', 100);
                         } else {
@@ -363,28 +365,29 @@
                         }
                         deferredPrompt = null;
                     }).catch((error) => {
-                        console.error('User choice error:', error);
+                        console.error('User choice error at', new Date().toLocaleTimeString(), ':', error);
                         showNotification('Installation failed - please use browser menu (3 dots > Install App).', 0);
                     });
                 }).catch((error) => {
-                    console.error('Prompt error:', error);
+                    console.error('Prompt error at', new Date().toLocaleTimeString(), ':', error);
                     showNotification('Failed to show native prompt - please use browser menu (3 dots > Install App).', 0);
                 });
             } else {
-                console.log('No deferredPrompt available, checking PWA status');
+                console.log('No deferredPrompt available at', new Date().toLocaleTimeString(), ', checking PWA status');
                 checkPWAStatus();
             }
         }
 
         function checkPWAStatus() {
             const issues = [];
+            const currentTime = new Date().toLocaleTimeString();
             if (!('serviceWorker' in navigator)) {
                 issues.push('Service Worker API not supported by this browser.');
             }
             if (!document.querySelector('link[rel="manifest"]')) {
                 issues.push('Manifest link tag missing in HTML.');
             } else {
-                fetch('/manifest.webmanifest').then(response => {
+                fetch('/manifest.webmanifest', { mode: 'no-cors' }).then(response => {
                     if (!response.ok) issues.push('Manifest file inaccessible or invalid (HTTP ' + response.status + ').');
                 }).catch(() => issues.push('Manifest file fetch failed.'));
             }
@@ -395,11 +398,15 @@
                 if (!reg || !reg.active) issues.push('Service Worker not registered or active.');
             }).catch(() => issues.push('Service Worker registration check failed.'));
 
-            const message = 'No native install prompt available. Possible issues:\n' +
+            // Additional checks
+            if (!navigator.onLine) issues.push('Device is offline, which may prevent prompt.');
+            if (document.hidden) issues.push('Tab is not active, which may delay prompt.');
+
+            const message = 'No native install prompt available at ' + currentTime + '.\nPossible issues:\n' +
                 issues.map((issue, index) => `${index + 1}. ${issue}`).join('\n') +
-                '\nFix these and reload, or use browser menu (3 dots > Install App).';
+                '\nAction: Fix these issues, reload, or use browser menu (3 dots > Install App).';
             showNotification(message);
-            console.log('PWA Status Check:', issues);
+            console.log('PWA Status Check at', currentTime, ':', issues);
         }
 
         function hideInstallPrompt() {
@@ -412,7 +419,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('downloadAppLink').addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('Download App clicked, deferredPrompt:', deferredPrompt);
+                console.log('Download App clicked at', new Date().toLocaleTimeString(), 'deferredPrompt:', deferredPrompt);
                 showInstallPrompt();
             });
 
