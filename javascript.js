@@ -3,7 +3,7 @@
  *******************************/
 
 window.addEventListener('load', function() {
-    setTimeout(showPopup, 500);
+    setTimeout(showPopup, 500); // Only triggers on page load, not on download
 });
 
 function showPopup() {
@@ -270,6 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // Directly process the request without showing popup
             makeRequest(url);
         }, 300));
     }
@@ -342,54 +343,6 @@ function resetInstallProgress() {
     const progressBar = progressElement.querySelector('.progress-bar');
     progressBar.style.width = '0%';
     progressBar.setAttribute('aria-valuenow', 0);
-}
-
-/*******************************
- * AJAX Request with Retry Logic
- *******************************/
-
-function makeRequest(inputUrl, retries = 4) {
-    const requestUrl = `https://vkrdownloader.xyz/server?api_key=vkrdownloader&vkr=${encodeURIComponent(inputUrl)}`;
-    const retryDelay = 2000;
-
-    $.ajax({
-        url: requestUrl,
-        type: "GET",
-        cache: true,
-        async: true,
-        crossDomain: true,
-        dataType: 'json',
-        timeout: 15000,
-        success: function(data) {
-            handleSuccessResponse(data, inputUrl);
-        },
-        error: function(xhr, status, error) {
-            if (retries > 0) {
-                let delay = retryDelay * Math.pow(2, 4 - retries);
-                console.log(`Retrying in ${delay / 1000} seconds... (${retries} attempts left)`);
-                setTimeout(() => makeRequest(inputUrl, retries - 1), delay);
-            } else {
-                const errorMessage = getErrorMessage(xhr, status, error);
-                console.error(`Error Details: ${errorMessage}`);
-                displayError("Unable to fetch the download link after several attempts. Please check the URL or try again later.");
-                document.getElementById("loading").style.display = "none";
-            }
-        },
-        complete: function() {
-            const downloadBtn = document.getElementById("downloadBtn");
-            const loadingElement = document.getElementById("loading");
-            if (downloadBtn) {
-                downloadBtn.disabled = false;
-                downloadBtn.innerHTML = "Download";
-            }
-            if (loadingElement) {
-                loadingElement.style.opacity = "0";
-                setTimeout(() => {
-                    loadingElement.style.display = "none";
-                }, 300);
-            }
-        }
-    });
 }
 
 /*******************************
