@@ -3,7 +3,8 @@
  *******************************/
 
 window.addEventListener('load', function() {
-    setTimeout(showPopup, 500); // Only triggers on page load, not on download
+    // Show popup 5 seconds after page load
+    setTimeout(showPopup, 5000);
 });
 
 function showPopup() {
@@ -12,6 +13,7 @@ function showPopup() {
 
     modal.style.display = 'block';
 
+    // Auto-disappear after 5 seconds
     setTimeout(() => {
         closePopup();
     }, 5000);
@@ -50,6 +52,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchBtn = document.getElementById('searchBtn');
     const popupInput = document.getElementById('popupInput');
     const modal = document.getElementById('popupModal');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    // Prevent popup from triggering on download button click
+    downloadBtn.addEventListener('click', function(event) {
+        event.stopPropagation(); // Stop event from bubbling to window load or other listeners
+    });
 
     closeBtn.addEventListener('click', closePopup);
 
@@ -245,7 +253,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const installProgress = document.getElementById("installProgress");
 
     if (downloadBtn && loadingElement && inputUrl) {
-        downloadBtn.addEventListener("click", debounce(function() {
+        downloadBtn.addEventListener("click", debounce(function(event) {
+            event.stopPropagation(); // Ensure no popup interference
             const errorContainer = document.getElementById("error");
             if (errorContainer) errorContainer.style.display = "none";
 
@@ -270,7 +279,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Directly process the request without showing popup
             makeRequest(url);
         }, 300));
     }
