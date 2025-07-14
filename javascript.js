@@ -2,9 +2,8 @@
  * Popup Modal Functionality
  *******************************/
 
-// [Previous popup modal code remains unchanged]
 window.addEventListener('load', function() {
-    setTimeout(showPopup, 500); // Small delay for smooth loading
+    setTimeout(showPopup, 500);
 });
 
 function showPopup() {
@@ -13,12 +12,10 @@ function showPopup() {
 
     modal.style.display = 'block';
 
-    // Auto-close after 5 seconds
     setTimeout(() => {
         closePopup();
     }, 5000);
 
-    // Try to read clipboard automatically
     readClipboard();
 }
 
@@ -32,7 +29,6 @@ function closePopup() {
     }, 300);
 }
 
-// Clipboard functionality
 async function readClipboard() {
     try {
         const text = await navigator.clipboard.readText();
@@ -48,7 +44,6 @@ async function readClipboard() {
     }
 }
 
-// Event listeners for popup
 document.addEventListener('DOMContentLoaded', function() {
     const closeBtn = document.getElementById('closePopup');
     const pasteBtn = document.getElementById('pasteBtn');
@@ -109,19 +104,293 @@ const formatColors = {
  * Utility Functions
  *******************************/
 
-// [Previous utility functions (getBackgroundColor, debounce, getYouTubeVideoIds, sanitizeContent, updateElement, getParameterByName) remain unchanged]
+function getBackgroundColor(downloadUrlItag) {
+    if (formatColors.greenFormats.includes(downloadUrlItag)) return "green";
+    if (formatColors.blueFormats.includes(downloadUrlItag)) return "#3800ff";
+    return formatColors.defaultColor;
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+function getYouTubeVideoIds(url) {
+    if (!url || typeof url !== 'string') return null;
+    try {
+        const urlObj = new URL(url);
+        const validHosts = ['www.youtube.com', 'youtube.com', 'youtu.be'];
+        if (!validHosts.includes(urlObj.hostname)) return null;
+
+        if (urlObj.hostname === 'youtu.be') {
+            const videoId = urlObj.pathname.slice(1);
+            return videoId.length === 11 ? videoId : null;
+        }
+
+        if (urlObj.hostname.includes('youtube.com')) {
+            if (urlObj.pathname.startsWith('/shorts/')) return urlObj.pathname.split('/')[2];
+            const videoId = urlObj.searchParams.get('v');
+            return videoId && videoId.length === 11 ? videoId : null;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error parsing URL:', error);
+        return null;
+    }
+}
+
+function sanitizeContent(content) {
+    return DOMPurify.sanitize(content || 'Untitled');
+}
+
+function updateElement(elementId, content) {
+    const element = document.getElementById(elementId);
+    if (element) element.innerHTML = content;
+}
+
+function getParameterByName(name, url) {
+    name = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`[?&]${name}(=([^&#]*)|&|#|$)`);
+    const results = regex.exec(url);
+    if (!results) return '';
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
 
 /*******************************
  * AJAX Request with Retry Logic
  *******************************/
 
-// [Previous makeRequest and getErrorMessage functions remain unchanged]
+function makeRequest(inputUrl, retries = 4) {
+    const requestUrl = `https://vkrdownloader.xyz/server?api_key=vkrdownloader&vkr=${encodeURIComponent(inputUrl)}`;
+    const retryDelay = 2000;
+
+    $.ajax({
+        url: requestUrl,
+        type: "GET",
+        cache: true,
+        async: true,
+        crossDomain: true,
+        dataType: 'json',
+        timeout: 15000,
+        success: function(data) {
+            handleSuccessResponse(data, inputUrl);
+        },
+        error: function(xhr, status, error) {
+            if (retries > 0) {
+                let delay = retryDelay * Math.pow(2, 4 - retries);
+                console.log(`Retrying in ${delay / 1000} seconds... (${retries} attempts left)`);
+                setTimeout(() => makeRequest(inputUrl, retries - 1), delay);
+            } else {
+                const errorMessage = getErrorMessage(xhr, status, error);
+                console.error(`Error Details: ${errorMessage}`);
+                displayError("Unable to fetch the download link after several attempts. Please check the URL or try again later.");
+                document.getElementById("loading").style.display = "none";
+            }
+        },
+        complete: function() {
+            const downloadBtn = document.getElementById("downloadBtn");
+            const loadingElement = document.getElementById("loading");
+            if (downloadBtn) {
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = "Download";
+            }
+            if (loadingElement) {
+                loadingElement.style.opacity = "0";
+                setTimeout(() => {
+                    loadingElement.style.display = "none";
+                }, 300);
+            }
+        }
+    });
+}
+
+function getErrorMessage(xhr, status, error) {
+    const statusCode = xhr.status;
+    let message = `Status: ${status}, Error: ${error}`;
+    if (xhr.responseText) {
+        try {
+            const response = JSON.parse(xhr.responseText);
+            if (response && response.error) message += `, Server Error: ${response.error}`;
+        } catch (e) {
+            message += `, Unable to parse server response.`;
+        }
+    }
+    switch (statusCode) {
+        case 0: return "Network Error: The server is unreachable.";
+        case 400: return "Bad Request: The input URL might be incorrect.";
+        case 401: return "Unauthorized: Please check the API key.";
+        case 429: return "Too Many Requests: You are being rate-limited.";
+        case 503: return "Service Unavailable: The server is temporarily overloaded.";
+        default: return `${message}, HTTP ${statusCode}: ${xhr.statusText || error}`;
+    }
+}
 
 /*******************************
  * Event Handlers
  *******************************/
 
-// [Previous download button event listener remains unchanged]
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadBtn = document.getElementById("downloadBtn");
+    const loadingElement = document.getElementById("loading");
+    const inputUrl = document.getElementById("inputUrl");
+    const installButton = document.getElementById("installButton");
+    const installPopup = document.getElementById("installPopup");
+    const closeInstallPopup = document.getElementById("closeInstallPopup");
+    const cancelInstallBtn = document.getElementById("cancelInstallBtn");
+    const confirmInstallBtn = document.getElementById("confirmInstallBtn");
+    const installProgress = document.getElementById("installProgress");
+
+    if (downloadBtn && loadingElement && inputUrl) {
+        downloadBtn.addEventListener("click", debounce(function() {
+            const errorContainer = document.getElementById("error");
+            if (errorContainer) errorContainer.style.display = "none";
+
+            loadingElement.style.display = "initial";
+            loadingElement.style.opacity = "0";
+            setTimeout(() => {
+                loadingElement.style.opacity = "1";
+            }, 10);
+
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = "Processing...";
+
+            const url = inputUrl.value.trim();
+            if (!url) {
+                displayError("Please enter a valid video URL.");
+                loadingElement.style.opacity = "0";
+                setTimeout(() => {
+                    loadingElement.style.display = "none";
+                }, 300);
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = "Download";
+                return;
+            }
+
+            makeRequest(url);
+        }, 300));
+    }
+
+    // Navigation
+    const pages = document.querySelectorAll('.page');
+    const navButtons = document.querySelectorAll('.nav-btn');
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            pages.forEach(page => page.style.display = 'none');
+            document.getElementById(button.dataset.page).style.display = 'block';
+            if (button.dataset.page === 'history') {
+                updateHistory();
+            }
+        });
+    });
+    document.getElementById('home').style.display = 'block';
+    updateHistory();
+
+    // Install Popup Logic
+    installButton.addEventListener('click', () => {
+        installPopup.style.display = 'block';
+    });
+
+    closeInstallPopup.addEventListener('click', () => {
+        installPopup.style.display = 'none';
+        if (installProgress.style.display === 'block') resetInstallProgress();
+    });
+
+    cancelInstallBtn.addEventListener('click', () => {
+        installPopup.style.display = 'none';
+        if (installProgress.style.display === 'block') resetInstallProgress();
+    });
+
+    confirmInstallBtn.addEventListener('click', () => {
+        startInstallProcess(installProgress);
+    });
+});
+
+/*******************************
+ * Install Process
+ *******************************/
+
+function startInstallProcess(progressElement) {
+    progressElement.style.display = 'block';
+    let progress = 0;
+    const progressBar = progressElement.querySelector('.progress-bar');
+
+    showDownloadFeedback('Starting installation...');
+
+    const interval = setInterval(() => {
+        if (progress < 100) {
+            progress += 10;
+            progressBar.style.width = `${progress}%`;
+            progressBar.setAttribute('aria-valuenow', progress);
+        } else {
+            clearInterval(interval);
+            showDownloadFeedback('Installation complete! 🎉');
+            setTimeout(() => {
+                progressElement.style.display = 'none';
+                document.getElementById('installPopup').style.display = 'none';
+                resetInstallProgress();
+            }, 1000);
+        }
+    }, 500); // Simulate 5-second install process
+}
+
+function resetInstallProgress() {
+    const progressElement = document.getElementById('installProgress');
+    const progressBar = progressElement.querySelector('.progress-bar');
+    progressBar.style.width = '0%';
+    progressBar.setAttribute('aria-valuenow', 0);
+}
+
+/*******************************
+ * AJAX Request with Retry Logic
+ *******************************/
+
+function makeRequest(inputUrl, retries = 4) {
+    const requestUrl = `https://vkrdownloader.xyz/server?api_key=vkrdownloader&vkr=${encodeURIComponent(inputUrl)}`;
+    const retryDelay = 2000;
+
+    $.ajax({
+        url: requestUrl,
+        type: "GET",
+        cache: true,
+        async: true,
+        crossDomain: true,
+        dataType: 'json',
+        timeout: 15000,
+        success: function(data) {
+            handleSuccessResponse(data, inputUrl);
+        },
+        error: function(xhr, status, error) {
+            if (retries > 0) {
+                let delay = retryDelay * Math.pow(2, 4 - retries);
+                console.log(`Retrying in ${delay / 1000} seconds... (${retries} attempts left)`);
+                setTimeout(() => makeRequest(inputUrl, retries - 1), delay);
+            } else {
+                const errorMessage = getErrorMessage(xhr, status, error);
+                console.error(`Error Details: ${errorMessage}`);
+                displayError("Unable to fetch the download link after several attempts. Please check the URL or try again later.");
+                document.getElementById("loading").style.display = "none";
+            }
+        },
+        complete: function() {
+            const downloadBtn = document.getElementById("downloadBtn");
+            const loadingElement = document.getElementById("loading");
+            if (downloadBtn) {
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = "Download";
+            }
+            if (loadingElement) {
+                loadingElement.style.opacity = "0";
+                setTimeout(() => {
+                    loadingElement.style.display = "none";
+                }, 300);
+            }
+        }
+    });
+}
 
 /*******************************
  * Response Handlers
@@ -147,44 +416,35 @@ function handleSuccessResponse(data, inputUrl) {
 
     if (data.data) {
         const videoData = data.data;
-
-        const thumbnailUrl = videoData.thumbnail;
         const downloadUrls = videoData.downloads.map(download => download.url);
         const videoSource = videoData.source;
         const videoId = getYouTubeVideoIds(videoSource);
-        const thumbnailUrlFinal = videoId 
-            ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
-            : videoData.thumbnail;
+        const thumbnailUrl = videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : videoData.thumbnail;
+        const description = videoData.description || 'Untitled';
 
         const videoHtml = `
-            <video style='background: black url(${thumbnailUrlFinal}) center center/cover no-repeat; width:100%; height:500px; border-radius:20px;' 
-                   poster='${thumbnailUrlFinal}' controls playsinline>
+            <video style='background: black url(${thumbnailUrl}) center center/cover no-repeat; width:100%; height:500px; border-radius:20px;' 
+                   poster='${thumbnailUrl}' controls playsinline>
                 <source src='${videoData.downloads[5]?.url || ''}' type='video/mp4'>
                 ${Array.isArray(downloadUrls) ? downloadUrls.map(url => `<source src='${url}' type='video/mp4'>`).join('') : ''}
                 <source src='https://vkrdownloader.xyz/server/dl.php?vkr=${encodeURIComponent(inputUrl)}' type='video/mp4'>
             </video>`;
         const YTvideoHtml = `
-            <video style='background: black url(${thumbnailUrlFinal}) center center/cover no-repeat; width:100%; height:500px; border-radius:20px;' 
-                   poster='${thumbnailUrlFinal}' controls playsinline>
+            <video style='background: black url(${thumbnailUrl}) center center/cover no-repeat; width:100%; height:500px; border-radius:20px;' 
+                   poster='${thumbnailUrl}' controls playsinline>
                 <source src='https://vkrdownloader.xyz/server/redirect.php?vkr=https://youtu.be/${videoId}' type='video/mp4'>
                 <source src='https://vkrdownloader.xyz/server/dl.php?vkr=${inputUrl}' type='video/mp4'>
                 ${downloadUrls.map(url => `<source src='${url}' type='video/mp4'>`).join('')}
             </video>`;
         const titleHtml = videoData.title ? `<h3>${sanitizeContent(videoData.title)}</h3>` : "";
-        const descriptionHtml = videoData.description ? `<h4><details><summary>View Description</summary>${sanitizeContent(videoData.description)}</details></h4>` : "";
-        const durationHtml = videoData.size ? `<h5>${sanitizeContent(videoData.size)}</h5>` : "";
+        const descriptionHtml = description ? `<h4><details><summary>View Description</summary>${sanitizeContent(description)}</details></h4>` : "";
 
-        if (videoId) {
-            updateElement("thumb", YTvideoHtml);
-        } else {
-            updateElement("thumb", videoHtml);
-        }
+        if (videoId) updateElement("thumb", YTvideoHtml);
+        else updateElement("thumb", videoHtml);
         updateElement("title", titleHtml);
         updateElement("description", descriptionHtml);
-        updateElement("duration", durationHtml);
 
-        // Pass description to generateDownloadButtons
-        generateDownloadButtons(data, inputUrl, videoData.description);
+        generateDownloadButtons(data, inputUrl, description, videoData.platform || 'Unknown', videoData.author || 'Unknown');
     } else {
         displayError("Issue: Unable to retrieve the download link. Please check the URL and contact us on Social Media @himalpaudel112.");
         document.getElementById("loading").style.display = "none";
@@ -193,46 +453,64 @@ function handleSuccessResponse(data, inputUrl) {
 
 async function forceDownload(url, filename) {
     console.log('Force download called:', url, filename);
-
     showDownloadFeedback('Starting download...');
 
     try {
         const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        link.download = filename;
-        link.style.display = 'none';
-
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        setTimeout(() => {
-            window.URL.revokeObjectURL(downloadUrl);
-        }, 1000);
+        const directoryEntry = await new Promise((resolve, reject) => {
+            window.requestFileSystem(window.TEMPORARY, 5 * 1024 * 1024, resolve, reject);
+        });
+        const fileEntry = await new Promise((resolve, reject) => {
+            directoryEntry.root.getFile(filename, { create: true, exclusive: false }, resolve, reject);
+        });
+        const writer = await new Promise((resolve, reject) => {
+            fileEntry.createWriter(resolve, reject);
+        });
+        await new Promise((resolve, reject) => {
+            writer.onwriteend = resolve;
+            writer.onerror = reject;
+            writer.write(blob);
+        });
 
         showDownloadFeedback('Download completed successfully! 🎉');
+
+        // Update history
+        let downloadHistory = JSON.parse(localStorage.getItem('downloadHistory')) || [];
+        downloadHistory.push({ filename, platform: 'Unknown', author: 'Unknown', timestamp: new Date().toISOString() });
+        localStorage.setItem('downloadHistory', JSON.stringify(downloadHistory));
+        updateHistory();
     } catch (error) {
         console.error('Download error:', error);
+        showDownloadFeedback('Download failed, trying fallback...');
 
         const link = document.createElement("a");
         link.href = url;
         link.download = filename;
         link.style.display = 'none';
-        link.setAttribute('target', '_self');
-
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+}
 
-        showDownloadFeedback('Download initiated via fallback method');
+function displayError(message) {
+    showDownloadFeedback(message, 'error');
+
+    const errorContainer = document.getElementById("error");
+    if (errorContainer) {
+        errorContainer.innerHTML = sanitizeContent(message);
+        errorContainer.style.display = "block";
+
+        setTimeout(() => {
+            errorContainer.style.opacity = '0';
+            setTimeout(() => {
+                errorContainer.style.display = 'none';
+                errorContainer.style.opacity = '1';
+            }, 300);
+        }, 8000);
     }
 }
 
@@ -288,16 +566,22 @@ function showDownloadFeedback(message) {
  * @param {Object} videoData - The video data from the server.
  * @param {string} inputUrl - The original input URL.
  * @param {string} description - The video description for filename.
+ * @param {string} platform - The platform mark.
+ * @param {string} author - The author's username.
  */
-function generateDownloadButtons(videoData, inputUrl, description) {
+function generateDownloadButtons(videoData, inputUrl, description, platform, author) {
     const downloadContainer = document.getElementById("download");
     downloadContainer.innerHTML = "";
+
+    let downloadHistory = JSON.parse(localStorage.getItem('downloadHistory')) || [];
+    const historyList = document.getElementById('historyList');
 
     if (videoData.data) {
         const downloads = videoData.data.downloads;
         const videoSource = videoData.data.source;
-
         const videoId = getYouTubeVideoIds(videoSource);
+        const sanitizedDescription = (description || 'Untitled').replace(/[<>:"/\\|?*]/g, '').substring(0, 50).trim();
+
         if (videoId) {
             const qualities = [
                 { quality: "mp3", label: "🎵 Audio MP3", color: "#ff6b6b" },
@@ -308,28 +592,15 @@ function generateDownloadButtons(videoData, inputUrl, description) {
 
             qualities.forEach(item => {
                 const downloadUrl = `https://vkrdownloader.xyz/server/dl.php?q=${encodeURIComponent(item.quality)}&vkr=${encodeURIComponent(videoSource)}`;
-                // Sanitize description and append quality/timestamp
-                const sanitizedDescription = (description || 'video').replace(/[<>:"/\\|?*]+/g, '').substring(0, 50).trim() || 'video';
-                const timestamp = Date.now();
-                const filename = `${sanitizedDescription}_${item.quality}_${timestamp}.${item.quality === 'mp3' ? 'mp3' : 'mp4'}`;
+                const filename = `${sanitizedDescription}_${item.quality}.${item.quality === 'mp3' ? 'mp3' : 'mp4'}`;
 
                 const button = document.createElement('button');
                 button.className = 'dlbtns';
                 button.style.cssText = `background: ${item.color}; width: 100%; padding: 12px; border-radius: 8px; border: none; color: white; font-weight: bold; cursor: pointer; margin: 5px 0;`;
                 button.innerHTML = item.label;
 
-                button.addEventListener('mouseover', function() {
-                    this.style.opacity = '0.8';
-                });
-
-                button.addEventListener('mouseout', function() {
-                    this.style.opacity = '1';
-                });
-
                 button.addEventListener('click', async function(event) {
                     event.preventDefault();
-                    event.stopPropagation();
-
                     this.disabled = true;
                     this.style.opacity = '0.6';
                     this.innerHTML = '⏳ Downloading...';
@@ -338,44 +609,40 @@ function generateDownloadButtons(videoData, inputUrl, description) {
                         showDownloadFeedback('Preparing download...');
 
                         const response = await fetch(downloadUrl);
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
                         const blob = await response.blob();
                         const objectUrl = window.URL.createObjectURL(blob);
 
-                        const link = document.createElement("a");
-                        link.href = objectUrl;
-                        link.download = filename;
-                        link.style.display = 'none';
-
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-
-                        setTimeout(() => {
-                            window.URL.revokeObjectURL(objectUrl);
-                        }, 1000);
+                        // Save to internal storage using Cordova File plugin
+                        const directoryEntry = await new Promise((resolve, reject) => {
+                            window.requestFileSystem(window.TEMPORARY, 5 * 1024 * 1024, resolve, reject);
+                        });
+                        const fileEntry = await new Promise((resolve, reject) => {
+                            directoryEntry.root.getFile(filename, { create: true, exclusive: false }, resolve, reject);
+                        });
+                        const writer = await new Promise((resolve, reject) => {
+                            fileEntry.createWriter(resolve, reject);
+                        });
+                        await new Promise((resolve, reject) => {
+                            writer.onwriteend = resolve;
+                            writer.onerror = reject;
+                            writer.write(blob);
+                        });
 
                         showDownloadFeedback(`${item.label} downloaded successfully! 🎉`);
+
+                        // Update history with proper filename
+                        downloadHistory.push({ filename: sanitizedDescription, platform, author, timestamp: new Date().toISOString() });
+                        localStorage.setItem('downloadHistory', JSON.stringify(downloadHistory));
+                        updateHistory();
+
                         this.innerHTML = '✅ Downloaded';
                         this.style.background = '#4CAF50';
                     } catch (error) {
                         console.error('Download error:', error);
-
-                        const link = document.createElement("a");
-                        link.href = downloadUrl;
-                        link.download = filename;
-                        link.style.display = 'none';
-                        link.setAttribute('target', '_self');
-
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-
-                        showDownloadFeedback(`${item.label} download started via fallback`);
-                        this.innerHTML = '📥 Downloaded';
+                        showDownloadFeedback(`${item.label} download failed`);
+                        this.innerHTML = '📥 Retry';
                     } finally {
                         setTimeout(() => {
                             this.disabled = false;
@@ -384,6 +651,14 @@ function generateDownloadButtons(videoData, inputUrl, description) {
                             this.style.background = item.color;
                         }, 3000);
                     }
+                });
+
+                button.addEventListener('mouseover', function() {
+                    this.style.opacity = '0.8';
+                });
+
+                button.addEventListener('mouseout', function() {
+                    this.style.opacity = '1';
                 });
 
                 downloadContainer.appendChild(button);
@@ -397,16 +672,18 @@ function generateDownloadButtons(videoData, inputUrl, description) {
                 const bgColor = getBackgroundColor(itag);
                 const videoExt = download.format_id;
                 const videoSize = download.size;
-                // Sanitize description and append format details
-                const sanitizedDescription = (description || 'video').replace(/[<>:"/\\|?*]+/g, '').substring(0, 50).trim() || 'video';
-                const timestamp = Date.now();
-                const filename = `${sanitizedDescription}_${videoExt}_${videoSize}_${timestamp}.mp4`;
+                const filename = `${sanitizedDescription}_${videoExt}.mp4`; // Use description + format
 
                 downloadContainer.innerHTML += `
                     <button class='dlbtns' style='background:${bgColor}' 
                             onclick='forceDownload("${downloadUrl}", "${filename}")'>
                         ${sanitizeContent(videoExt)} - ${sanitizeContent(videoSize)}
                     </button>`;
+
+                // Update history with proper filename
+                downloadHistory.push({ filename: sanitizedDescription, platform, author, timestamp: new Date().toISOString() });
+                localStorage.setItem('downloadHistory', JSON.stringify(downloadHistory));
+                updateHistory();
             }
         });
     } else {
@@ -417,6 +694,25 @@ function generateDownloadButtons(videoData, inputUrl, description) {
     if (downloadContainer.innerHTML.trim() === "") {
         displayError("Server Down due to Too Many Requests. Please contact us on Social Media @himalpaudel112.");
         document.getElementById("container").style.display = "none";
-        // window.location.href = `https://vkrdownloader.xyz/download.php?vkr=${encodeURIComponent(inputUrl)}`;
     }
+}
+
+// Update history display
+function updateHistory() {
+    const historyList = document.getElementById('historyList');
+    if (!historyList) return;
+
+    let downloadHistory = JSON.parse(localStorage.getItem('downloadHistory')) || [];
+    historyList.innerHTML = ''; // Clear existing items
+    if (downloadHistory.length === 0) {
+        historyList.innerHTML = '<li class="list-group-item text-center">No downloads yet.</li>';
+        return;
+    }
+
+    downloadHistory.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.textContent = `${item.filename || 'Unknown'} - ${item.platform || 'Unknown'} - ${item.author || 'Unknown'} - ${new Date(item.timestamp).toLocaleString()}`;
+        historyList.appendChild(li);
+    });
 }
